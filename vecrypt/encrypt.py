@@ -11,10 +11,10 @@ def encrypt_embedding(
     
     Args:
         embedding: The embedding to encrypt.
-        seed: 32-byte secret key
+        seed: 32-byte (256-bit) secret key. Use secrets.token_bytes(32) to generate securely.
     
     Returns:
-        Encrypted embedding as list of 1024 floats
+        Encrypted embedding vector (same dimension as input)
     """
     # Generate or load R_K
     R_K = orthogonal_from_seed(seed, embedding.shape[0])
@@ -31,6 +31,14 @@ def decrypt_embedding(
 ) -> np.ndarray:
     """
     Decrypt an encrypted embedding back to the original space.
+    
+    Args:
+        encrypted_embedding: The encrypted embedding vector
+        seed: 32-byte (256-bit) secret key. Use secrets.token_bytes(32) to generate securely.
+            Must match the seed used for encryption.
+    
+    Returns:
+        Decrypted embedding vector
     
     Note: Only works if same seed was used for encryption.
     """

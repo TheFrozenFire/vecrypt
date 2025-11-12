@@ -5,7 +5,8 @@ def orthogonal_from_seed(seed: bytes, dim: int) -> np.ndarray:
     Generate a deterministic orthogonal matrix R_K from a 256-bit seed.
     
     Args:
-        seed: 32-byte (256-bit) cryptographically secure seed
+        seed: 32-byte (256-bit) cryptographically secure seed.
+            Use secrets.token_bytes(32) to generate securely.
         dim: Embedding dimension
     
     Returns:
