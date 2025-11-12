@@ -1,0 +1,37 @@
+# Embedding Vector Encryption through Orthogonal Transformation
+
+The technique relies on the mathematical properties of orthogonal transformations, which are linear operations that preserve the lengths of vectors and the angles between them. An embedding produced by a language model is a vector in a high-dimensional space, where the numerical coordinates of the vector represent the position of the data point. Similarity between two embeddings is determined by the cosine of the angle between their vectors, because the dot product of two vectors equals the product of their lengths multiplied by the cosine of the angle, and the lengths of embeddings are typically normalized to one.
+
+To apply the technique, a random matrix is first generated with the same number of columns as the dimension of the embedding vectors. This random matrix has entries drawn independently from a standard distribution, such as the normal distribution with mean zero and variance one. The QR decomposition is then computed on this random matrix. The QR decomposition factors any matrix into the product of an orthogonal matrix and an upper triangular matrix. The orthogonal matrix produced by this decomposition has the property that its columns are orthonormal, meaning each column has length one and any two distinct columns have dot product zero.
+
+This orthogonal matrix is used to transform every embedding vector. The transformation consists of multiplying the orthogonal matrix by the embedding vector, which produces a new vector in the same dimensional space. Because the matrix is orthogonal, the transformation preserves the dot product between any pair of vectors. Specifically, the dot product of two transformed vectors equals the dot product of the original vectors. Since similarity search in vector databases relies entirely on dot products or cosine similarity, the transformed vectors yield exactly the same similarity rankings and scores as the original vectors. No information required for retrieval is lost.
+
+Recovery of the original embedding from a transformed vector requires knowledge of the orthogonal matrix. Without the matrix, the transformation appears as a random rotation and possible reflection of the entire space of vectors. The space of all possible orthogonal matrices in a given dimension is vast, and each distinct orthogonal matrix produces a different transformed version of the same original vector. Determining which orthogonal matrix was used is equivalent to solving for an unknown basis of the space that aligns the transformed coordinates back to the original coordinates. This alignment problem has no unique solution without the specific matrix, because many orthogonal matrices can map the set of transformed vectors to sets that preserve all pairwise dot products.
+
+The random seed ensures that the same random matrix, and thus the same orthogonal matrix, is produced whenever the seed is reused. This allows the identical transformation to be applied consistently to all embeddings during storage and to query embeddings during search. The seed itself does not need to be secret if the goal is only to prevent direct access to the original coordinates, but keeping the seed confidential adds a layer of protection against reconstruction attempts.
+
+The effectiveness stems from the fact that orthogonal transformations form a group under matrix multiplication, and the transformation is invertible using the transpose of the orthogonal matrix, which is also orthogonal. The preservation of geometry guarantees zero loss in search accuracy, while the difficulty of inverting the transformation without the matrix prevents recovery of the exact original numerical values of the embeddings.
+
+# Secret Shared Vector Encryption
+
+The orthogonal matrix can be secret-shared among multiple parties such that no single party holds the complete matrix, yet the parties can jointly compute the transformed (encrypted) version of any embedding vector without ever reconstructing the matrix itself. This is possible because matrix-vector multiplication is a linear operation, and linear operations are compatible with additive secret sharing, a standard technique in secure multi-party computation.
+
+Each party receives a share of every entry in the orthogonal matrix. For a matrix of dimension d by d, the matrix has d squared entries, and each entry is split additively into multiple shares—one for each party—such that the sum of the shares across all parties equals the original entry, and each individual share reveals no information about the entry. These shares are generated once, using the random seed to produce the orthogonal matrix, after which the matrix itself can be discarded, leaving only the shares distributed to the parties.
+To transform an embedding vector, which has d coordinates, the following process is executed:
+
+The party that holds the plaintext embedding vector splits each of its d coordinates into additive shares, one for each participating party, such that the sum of shares for a given coordinate equals the original coordinate. This party then sends the appropriate share of each coordinate to every other party. After this step, no party knows any complete coordinate of the original vector.
+
+Each party now possesses:
+* A share of every entry of the orthogonal matrix.
+* A share of every coordinate of the embedding vector.
+
+For the transformed vector, each output coordinate is the dot product of one row of the orthogonal matrix with the embedding vector. Since dot product is summation of element-wise products, each party can locally compute, for every output position, the sum of the products of its own matrix-entry shares and its own vector-coordinate shares. This local summation produces a share of the corresponding output coordinate.
+Because all operations are linear and the shares are additive, the sum across all parties of their local summations equals the true transformed coordinate. Thus, each party ends up with an additive share of every coordinate of the encrypted vector.
+
+After these steps, the parties can either:
+
+Submit their shares of the encrypted vector to the vector database, which stores the shares and performs similarity search by computing dot products share-wise (possible in some secure indexing schemes), or
+Use a secure multi-party protocol to combine the shares only at search time, revealing the encrypted vector only to an authorized query processor that holds the matching shares of the query vector.
+
+Crucially, because the orthogonal matrix is never reconstructed during the computation, and because matrix-vector multiplication distributes over addition, the transformation preserves the security property: no party learns the original embedding coordinates or the orthogonal matrix entries. The output encrypted vector retains perfect geometric fidelity for similarity search, as the dot product between any two transformed vectors equals the dot product of the originals, and this equality holds even when computed share-wise and summed.
+This process can be repeated for any number of embedding vectors and queries, using the same fixed secret-shared orthogonal matrix. The random seed that originally generated the matrix need never be revealed; only the resulting shares are distributed. Therefore, multiple parties can cooperate to produce encrypted vectors for storage and search while keeping both the transformation key and the data itself confidential.

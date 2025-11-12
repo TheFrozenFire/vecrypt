@@ -1,0 +1,18 @@
+[project]
+name = "vecrypt"
+version = "0.1.0"
+description = "A library for encrypting and decrypting embeddings"
+authors = [
+    { name = "Justin Martin", email = "justin@thefrozenfire.com" }
+]
+license = { text = "MIT" }
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+]
